@@ -84,7 +84,8 @@ async def ssh_start(ctx, username):
         ssh_client = paramiko.SSHClient()
         ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-        ssh_client.connect(ssh_hostname, username=ssh_username_to_use, password=ssh_password_to_use)
+        ssh_port = config['SSH'].get('port', 22)
+        ssh_client.connect(ssh_hostname, port=int(ssh_port), username=ssh_username_to_use, password=ssh_password_to_use)
 
         ssh_connected = True
         connection_channel = ctx.channel
