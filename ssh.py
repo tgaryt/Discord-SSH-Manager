@@ -3,7 +3,8 @@ from discord.ext import commands, tasks
 import paramiko
 import configparser
 import shlex
-import datetime
+import os
+from datetime import datetime
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -23,6 +24,24 @@ intents.guilds = True
 intents.message_content = True
 
 bot = commands.Bot(command_prefix='!', intents=intents)
+
+def create_auto_files():
+    log_file_path = 'rcon.log'
+    if not os.path.exists(log_file_path):
+        with open(log_file_path, 'w'):
+            pass
+
+def log_command_used(username, command):
+    current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    log_message = f"{current_time} - {username} - {command}\n"
+    log_file_path = 'rcon.log'
+
+    if not os.path.exists(log_file_path):
+        with open(log_file_path, 'w') as new_log_file:
+            pass
+
+    with open(log_file_path, 'a') as log_file:
+        log_file.write(log_message)
 
 @bot.event
 async def on_ready():
@@ -117,6 +136,7 @@ async def ssh_command(ctx, *, full_command):
             output = 'Command produced no output.'
 
         await connection_channel.send(f'```{output}```')
+        log_command_used(ctx.author.name, full_command)
 
     except Exception as e:
         print(f'An error occurred: {e}')
