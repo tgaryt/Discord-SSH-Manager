@@ -12,8 +12,6 @@ bot_token = config['Bot']['BotToken']
 activity_timeout = config['Bot']['ActivityTimeout']
 
 ssh_hostname = config['SSH']['hostname']
-ssh_username = config['SSH']['username']
-ssh_password = config['SSH']['password']
 
 ssh_client = None
 ssh_connected = False
@@ -64,7 +62,7 @@ async def close_ssh_connection():
             ssh_connected = False
 
 @bot.command(name='ssh_start')
-async def ssh_start(ctx):
+async def ssh_start(ctx, username):
     global ssh_client, ssh_connected, connection_channel
 
     channel_name = ctx.channel.mention
@@ -75,14 +73,22 @@ async def ssh_start(ctx):
 
     try:
         print(f'Connecting to {ssh_hostname}...')
+
+        ssh_username_to_use = config['SSH'].get(f'username_{username}', '')
+        ssh_password_to_use = config['SSH'].get(f'password_{username}', '')
+
+        if not ssh_username_to_use or not ssh_password_to_use:
+            await ctx.send(f'Invalid username: {username}')
+            return
+
         ssh_client = paramiko.SSHClient()
         ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-        ssh_client.connect(ssh_hostname, username=ssh_username, password=ssh_password)
-        
+        ssh_client.connect(ssh_hostname, username=ssh_username_to_use, password=ssh_password_to_use)
+
         ssh_connected = True
         connection_channel = ctx.channel
-        await ctx.send(f'SSH connection started in channel {channel_name}.')
+        await ctx.send(f'SSH connection started in channel {channel_name} with username {ssh_username_to_use}.')
     
     except Exception as e:
         print(f'Error starting SSH connection: {e}')
