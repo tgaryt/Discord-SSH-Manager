@@ -127,10 +127,10 @@ async def ssh_command(ctx, *, full_command):
         command_str = f'/bin/bash -c {shlex.quote(full_command)}'
         stdin, stdout, stderr = ssh_client.exec_command(command_str)
 
-        output = stdout.read().decode('utf-8')
+        output = stdout.read().decode('utf-8', timeout=90)
 
         if not output:
-            output = stderr.read().decode('utf-8')
+            output = stderr.read().decode('utf-8', timeout=90)
 
         if not output:
             output = 'Command produced no output.'
