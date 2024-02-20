@@ -4,10 +4,8 @@ import paramiko
 import configparser
 import shlex
 import os
-from datetime from datetime
+from datetime import datetime
 import asyncio
-
-current_ssh_username = None
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -20,6 +18,7 @@ ssh_hostname = config['SSH']['hostname']
 ssh_client = None
 ssh_connected = False
 connection_channel = None
+current_ssh_username = None
 
 intents = discord.Intents.default()
 intents.messages = True
@@ -64,7 +63,7 @@ async def activity_check():
             return
 
         last_message_time = last_bot_message.created_at.timestamp()
-        current_time = datetime.datetime.now().timestamp()
+        current_time = datetime.now().timestamp()
         elapsed_time = current_time - last_message_time
 
         if elapsed_time > float(activity_timeout) * 60:
@@ -88,6 +87,10 @@ async def ssh_start(ctx, username, send_message=True):
     global ssh_client, ssh_connected, connection_channel, current_ssh_username
 
     channel_name = ctx.channel.mention
+
+    if username is None:
+        await ctx.send('Please provide a username with the !ssh_start command. For example: !ssh_start root')
+        return
 
     if ssh_connected:
         await close_ssh_connection()
@@ -124,6 +127,10 @@ async def ssh_start(ctx, username, send_message=True):
 @bot.command(name='ssh')
 async def ssh_command(ctx, *, full_command):
     global ssh_client, ssh_connected, connection_channel, current_ssh_username
+
+    if not ssh_connected:
+        await ctx.send(f'No active SSH connection. Use !ssh_start to initiate a connection.')
+        return
 
     if not ssh_connected or ctx.channel != connection_channel:
         channel_name = connection_channel.mention
