@@ -4,7 +4,10 @@ import paramiko
 import configparser
 import shlex
 import os
-from datetime import datetime
+from datetime from datetime
+import asyncio
+
+current_ssh_username = None
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -81,8 +84,8 @@ async def close_ssh_connection():
             ssh_connected = False
 
 @bot.command(name='ssh_start')
-async def ssh_start(ctx, username):
-    global ssh_client, ssh_connected, connection_channel
+async def ssh_start(ctx, username, send_message=True):
+    global ssh_client, ssh_connected, connection_channel, current_ssh_username
 
     channel_name = ctx.channel.mention
 
@@ -100,6 +103,8 @@ async def ssh_start(ctx, username):
             await ctx.send(f'Invalid username: {username}')
             return
 
+        current_ssh_username = username
+
         ssh_client = paramiko.SSHClient()
         ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
@@ -108,7 +113,9 @@ async def ssh_start(ctx, username):
 
         ssh_connected = True
         connection_channel = ctx.channel
-        await ctx.send(f'SSH connection started in channel {channel_name} with username {ssh_username_to_use}.')
+
+        if send_message:
+            await ctx.send(f'SSH connection started in channel {channel_name} with username {ssh_username_to_use}.')
     
     except Exception as e:
         print(f'Error starting SSH connection: {e}')
@@ -116,7 +123,7 @@ async def ssh_start(ctx, username):
 
 @bot.command(name='ssh')
 async def ssh_command(ctx, *, full_command):
-    global ssh_client, ssh_connected, connection_channel
+    global ssh_client, ssh_connected, connection_channel, current_ssh_username
 
     if not ssh_connected or ctx.channel != connection_channel:
         channel_name = connection_channel.mention
@@ -126,6 +133,15 @@ async def ssh_command(ctx, *, full_command):
     try:
         command_str = f'/bin/bash -c {shlex.quote(full_command)}'
         stdin, stdout, stderr = ssh_client.exec_command(command_str)
+        log_command_used(ctx.author.name, full_command)
+
+        await asyncio.sleep(1)
+
+        if not stdout.channel.exit_status_ready():
+            await close_ssh_connection()
+            await ssh_start(ctx, current_ssh_username, send_message=False)
+            await ctx.send(f'The previous command is still running. SSH connection restarted.')
+            return
 
         output = stdout.read().decode('utf-8')
 
@@ -136,7 +152,6 @@ async def ssh_command(ctx, *, full_command):
             output = 'Command produced no output.'
 
         await connection_channel.send(f'```{output}```')
-        log_command_used(ctx.author.name, full_command)
 
     except Exception as e:
         print(f'An error occurred: {e}')
