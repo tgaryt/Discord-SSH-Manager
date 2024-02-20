@@ -83,12 +83,12 @@ async def close_ssh_connection():
             ssh_connected = False
 
 @bot.command(name='ssh_start')
-async def ssh_start(ctx, username, send_message=True):
+async def ssh_start(ctx, username='default_username', send_message=True):
     global ssh_client, ssh_connected, connection_channel, current_ssh_username
 
     channel_name = ctx.channel.mention
 
-    if username is None:
+    if username == 'default_username':
         await ctx.send('Please provide a username with the !ssh_start command. For example: !ssh_start root')
         return
 
@@ -142,7 +142,7 @@ async def ssh_command(ctx, *, full_command):
         stdin, stdout, stderr = ssh_client.exec_command(command_str)
         log_command_used(ctx.author.name, full_command)
 
-        await asyncio.sleep(1)
+        await asyncio.sleep(15)
 
         if not stdout.channel.exit_status_ready():
             await close_ssh_connection()
