@@ -46,6 +46,16 @@ def log_command_used(username, command):
         log_file.write(log_message)
 
 @bot.event
+async def on_message(message):
+    if message.author.bot:
+        return
+
+    if isinstance(message.channel, discord.DMChannel):
+        return
+
+    await bot.process_commands(message)
+
+@bot.event
 async def on_ready():
     print(f'Logged in as {bot.user.name}')
     activity_check.start()
